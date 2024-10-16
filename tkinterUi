@@ -1,0 +1,74 @@
+import tkinter as tk
+from tkinter import simpledialog, messagebox, scrolledtext
+import requests
+import datetime as dt
+
+BASE_URL = "https://api.openweathermap.org/data/2.5/weather?"
+API_KEY = "ff7baa6fa20bb28fdfb60f35cf15b121"
+
+#defining function to convert kelvin to celcius and fahrenheit
+def kelvin_to_celsius(kelvin):
+    return kelvin - 273.15
+
+#creating list of Cities from user input
+def get_weather_data():
+    cities = []
+    for i in range(5):
+        city = simpledialog.askstring("Input", f"Enter the name of city {i + 1}:")
+        if city:
+            cities.append(city)
+        else:
+            messagebox.showwarning("Input Error", "City name cannot be empty.")
+            return
+
+    #intialising variables to keep track of average and coldest temperature
+    total_temp_celsius = 0
+    coldest_city = None
+    coldest_temp = float('inf')
+    results = ""
+
+    #looping through array to fetch data for each city
+    for CITY in cities:
+        url = BASE_URL + "appid=" + API_KEY + "&q=" + CITY
+        response = requests.get(url).json()
+
+        #checking whether request was valid
+        if response.get('cod') != 200:
+            results += f"Could not retrieve data for {CITY}. Error: {response.get('message')}\n"
+            continue
+        
+        #proccessing temperature data
+        temp_kelvin = response['main']['temp']
+        temp_celsius = kelvin_to_celsius(temp_kelvin)
+        total_temp_celsius += temp_celsius
+        #comparing whether current city is coldest
+        if temp_celsius < coldest_temp:
+            coldest_temp = temp_celsius
+            coldest_city = CITY
+        #appending data for each city in results string
+        results += f"\nWeather in {CITY}:\n"
+        results += f"Temperature: {temp_celsius:.2f}°C\n"
+
+    #average temp and coldest city
+    if cities:
+        average_temp_celsius = total_temp_celsius / len(cities)
+        results += f"\nAverage temperature across the cities: {average_temp_celsius:.2f}°C\n"
+        results += f"The coldest city is {coldest_city} with a temperature of {coldest_temp:.2f}°C."
+
+    #outputting results in a new window
+    result_window = tk.Toplevel(root)
+    result_window.title("Weather Data")
+    text_area = scrolledtext.ScrolledText(result_window, wrap=tk.WORD)
+    text_area.insert(tk.INSERT, results)
+    text_area.configure(state='disabled')
+    text_area.pack(padx=10, pady=10)
+
+#main window
+root = tk.Tk()
+root.title("Weather Checker")
+
+#button to display weather data
+get_weather_button = tk.Button(root, text="Choose 5 Cities to get temperature data for", command=get_weather_data)
+get_weather_button.pack(padx=20, pady=20)
+
+root.mainloop()
